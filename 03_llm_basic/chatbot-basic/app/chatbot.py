@@ -14,7 +14,7 @@ class Chatbot:
         )
 
 
-    def chat(self, user_message: str):
+    def chat_stream(self, user_message: str):
         """
         사용자 입력을 받아
         LLM 응답 반환
@@ -25,22 +25,27 @@ class Chatbot:
             user_message
         )
 
-
-        # 2. OpenAI API 호출
-        response = client.responses.create(
+        # 2. OpenAI API 호출 - 스트리밍 모드
+        stream = client.responses.create(
             model=OPENAI_MODEL,
-            input=self.conversation.get_messages()
+            input=self.conversation.get_messages(),
+            stream=True
         )
 
-
-        # 3. 응답 추출
-        assistant_message = response.output_text
+        full_response = ""
 
 
-        # 4. AI 응답 저장
+        for event in stream:
+
+            if event.type == "response.output_text.delta":
+
+                # API 응답 구조 변경에 따라 event.delta가 None일 수 있으므로 체크 필요
+                if event.delta:
+                    full_response += event.delta
+                    yield event.delta
+
+
+        # 3. AI 응답 저장
         self.conversation.add_assistant_message(
-            assistant_message
+            full_response
         )
-
-
-        return assistant_message

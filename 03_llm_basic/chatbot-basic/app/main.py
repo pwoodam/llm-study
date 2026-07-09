@@ -43,15 +43,12 @@ def main():
             break
 
 
-        response = chatbot.chat(
-            user_input
-        )
+        print("\nAssistant:", end=" ")
 
-
-        print(
-            "\nAssistant:",
-            response
-        )
+        for chunk in chatbot.chat_stream(user_input):
+            print(chunk, end="", flush=True)
+        
+        print()  # 줄바꿈
 
 # 프로그램의 시작점일 때만 아래 코드 실행
 if __name__ == "__main__":
