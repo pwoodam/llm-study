@@ -7,11 +7,15 @@ class Chatbot:
     """
     대화형 LLM Chatbot 관리 클래스
     """
+    
+    def __init__(
+        self,
+        system_prompt: str
+    ):
 
-    def __init__(self, system_prompt: str):
-        self.conversation = Conversation(
-            system_prompt
-        )
+        self.system_prompt = system_prompt
+
+        self.conversation = Conversation()
 
 
     def chat_stream(self, user_message: str):
@@ -28,7 +32,7 @@ class Chatbot:
         # 2. OpenAI API 호출 - 스트리밍 모드
         stream = client.responses.create(
             model=OPENAI_MODEL,
-            input=self.conversation.get_messages(),
+            input=self.conversation.get_messages(self.system_prompt),
             stream=True
         )
 
@@ -39,7 +43,7 @@ class Chatbot:
 
             if event.type == "response.output_text.delta":
 
-                # API 응답 구조 변경
+                # API 응답 구조 변경에 따라 event.delta가 None일 수 있으므로 체크 필요
                 if event.delta:
                     full_response += event.delta
                     yield event.delta

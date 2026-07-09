@@ -6,18 +6,9 @@ class Conversation:
     SQLite 기반 영구 저장
     """
 
-    def __init__(self, system_prompt: str):
+    def __init__(self):
 
         self.database = Database()
-
-        messages = self.database.get_messages()
-
-        # 최초 실행 시 system prompt 저장
-        if not messages:
-            self.database.save_message(
-                "system",
-                system_prompt
-            )
 
     def add_user_message(self, content: str):
         """
@@ -39,8 +30,21 @@ class Conversation:
         )
 
 
-    def get_messages(self):
+    def get_messages(self, system_prompt: str):
         """
         OpenAI API 전달용 messages 반환
         """
-        return self.database.get_messages()
+
+        # OpenAI API에 전달할 messages에 system_prompt 조립
+        messages = [
+            {
+                "role": "system",
+                "content": system_prompt
+            }
+        ]
+
+        messages.extend(
+            self.database.get_messages()
+        )
+        
+        return messages
