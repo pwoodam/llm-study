@@ -39,7 +39,7 @@ class Chatbot:
 
             if event.type == "response.output_text.delta":
 
-                # API 응답 구조 변경에 따라 event.delta가 None일 수 있으므로 체크 필요
+                # API 응답 구조 변경
                 if event.delta:
                     full_response += event.delta
                     yield event.delta

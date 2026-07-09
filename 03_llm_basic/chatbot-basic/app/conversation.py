@@ -1,26 +1,31 @@
+from database import Database
+
 class Conversation:
     """
     대화 기록을 관리하는 클래스
+    SQLite 기반 영구 저장
     """
 
     def __init__(self, system_prompt: str):
-        self.messages = [
-            {
-                "role": "system",
-                "content": system_prompt
-            }
-        ]
 
+        self.database = Database()
+
+        messages = self.database.get_messages()
+
+        # 최초 실행 시 system prompt 저장
+        if not messages:
+            self.database.save_message(
+                "system",
+                system_prompt
+            )
 
     def add_user_message(self, content: str):
         """
         사용자 메시지 추가
         """
-        self.messages.append(
-            {
-                "role": "user",
-                "content": content
-            }
+        self.database.save_message(
+            "user",
+            content
         )
 
 
@@ -28,11 +33,9 @@ class Conversation:
         """
         AI 응답 추가
         """
-        self.messages.append(
-            {
-                "role": "assistant",
-                "content": content
-            }
+        self.database.save_message(
+            "assistant",
+            content
         )
 
 
@@ -40,11 +43,4 @@ class Conversation:
         """
         OpenAI API 전달용 messages 반환
         """
-        return self.messages
-
-
-    def clear(self):
-        """
-        대화 초기화
-        """
-        self.messages = []
+        return self.database.get_messages()
