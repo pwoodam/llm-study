@@ -20,6 +20,7 @@ LLM은 이전 대화 내용을 자동으로 기억하지 않습니다.
 
 * Conversation History 관리
 * SQLite 기반 Conversation Memory 구현
+* Session 기반 대화 관리
 * System Prompt 분리 관리
 * OpenAI Client 분리
 * Config 관리
@@ -37,6 +38,7 @@ LLM은 이전 대화 내용을 자동으로 기억하지 않습니다.
 * Role 기반 Message 구조 이해
 * Conversation History 관리 방식 이해
 * SQLite 기반 LLM Memory 구현
+* Session 기반 데이터 관리 구조 이해
 * 객체지향(OOP) 기반 Chatbot 설계
 * 환경 설정과 비즈니스 로직 분리
 * LLM Application에서 Streaming Response 처리 방식 이해
@@ -121,6 +123,15 @@ SQLite Database
 
 ↓
 
+Message History 조회
+
+↓
+
+System Prompt + Conversation History 조립
+
+
+↓
+
 OpenAI API
 
 ↓
@@ -192,35 +203,62 @@ SQLite Database
 
 ---
 
+## Session 기반 Memory 구조
+
+대화 기록은 Session 단위로 관리합니다.
+
+하나의 Session은 여러 개의 Message를 가질 수 있습니다.
+
+```text
+sessions
+
+id
+created_at
+
+
+messages
+
+id
+session_id
+role
+content
+created_at
+```
+
+관계:
+
+```text
+Session (1)
+
+    |
+
+    | 1:N
+
+    |
+
+Messages (N)
+```
+
+---
+
 ## Database Schema
 
-`messages` 테이블을 생성하여 대화 기록을 저장합니다.
+### sessions Table
+
+| Column | Description |
+| --- | --- |
+| id | session 식별자 |
+| created_at | session 생성 시간 |
+
+### messages Table
 
 | Column | Description |
 | --- | --- |
 | id | 메시지 식별자 |
+| session_id | 연결된 Session ID |
 | role | user / assistant |
 | content | 메시지 내용 |
 | created_at | 생성 시간 |
-
----
-
-## 저장 예시
-
-```python
-[
-    {
-        "role": "user",
-        "content": "RAG가 뭐야?"
-    },
-    {
-        "role": "assistant",
-        "content": "RAG는 Retrieval-Augmented Generation입니다."
-    }
-]
-```
-
-저장된 Conversation History는 다음 요청 시 OpenAI API에 함께 전달됩니다.
 
 ---
 
@@ -246,6 +284,7 @@ Conversation History를 관리하는 클래스입니다.
 
 주요 기능:
 
+* Session 생성 및 관리
 * User Message 추가
 * Assistant Message 추가
 * Database 연동
@@ -260,6 +299,7 @@ SQLite Database를 관리하는 클래스입니다.
 주요 기능:
 
 * SQLite 연결
+* Session 테이블 생성
 * messages 테이블 생성
 * Message 저장
 * Conversation History 조회
@@ -434,6 +474,7 @@ SQLite에 저장된 Conversation History를 활용하여 프로그램 재실행 
 * Multi-turn Conversation 구현
 * Conversation History 관리
 * SQLite 기반 Memory 구현
+* Session 기반 데이터 모델링
 * Role 기반 Message 구성
 * OpenAI API 활용 방법
 * Prompt 분리 및 관리
@@ -448,9 +489,8 @@ SQLite에 저장된 Conversation History를 활용하여 프로그램 재실행 
 
 향후 다음 기능을 추가할 예정입니다.
 
-* Session 기반 Conversation 분리
 * Conversation 길이 제한
-* Token 관리
+* Token 기반 대화 관리
 * FastAPI 기반 Chat API
 * LangChain Memory 적용
 * RAG 기반 Chatbot 확장
@@ -463,4 +503,4 @@ SQLite에 저장된 Conversation History를 활용하여 프로그램 재실행 
 
 또한 Prompt, Conversation, Database, API Client를 역할별로 분리하여 유지보수성과 확장성을 고려한 LLM Application 구조를 설계하였습니다.
 
-이후 구현할 Session Memory, RAG, AI Agent 프로젝트의 기반이 되는 LLM Application 설계 경험을 확보하였습니다.
+이를 기반으로 이후 구현할 Token 관리, FastAPI 기반 Chat API, RAG, AI Agent 프로젝트로 확장 가능한 LLM Application 설계 경험을 확보하였습니다.
