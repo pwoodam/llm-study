@@ -25,14 +25,25 @@ class Chatbot:
         """
 
         # 1. 사용자 메시지 추가
-        self.conversation.add_user_message(
-            user_message
+        self.conversation.add_message(
+            role="user",
+            content=user_message
         )
 
         # 2. OpenAI API 호출 - 스트리밍 모드
+        
+        # OpenAI API에 전달할 messages에 system_prompt 조립
+        messages = [
+            {
+                "role": "system",
+                "content": self.system_prompt
+            }
+        ]
+        messages.extend(self.conversation.get_messages())
+
         stream = client.responses.create(
             model=OPENAI_MODEL,
-            input=self.conversation.get_messages(self.system_prompt),
+            input=messages,
             stream=True
         )
 
@@ -50,6 +61,7 @@ class Chatbot:
 
 
         # 3. AI 응답 저장
-        self.conversation.add_assistant_message(
-            full_response
+        self.conversation.add_message(
+            role="assistant",
+            content=full_response
         )

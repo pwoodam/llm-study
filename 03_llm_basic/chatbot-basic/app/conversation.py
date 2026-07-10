@@ -6,45 +6,43 @@ class Conversation:
     SQLite 기반 영구 저장
     """
 
-    def __init__(self):
+    def __init__(
+        self,
+        session_id: int | None = None
+    ):
 
         self.database = Database()
 
-    def add_user_message(self, content: str):
+        if session_id is None:
+            # session_id가 주어지지 않으면 새 세션 생성
+            self.session_id = self.database.create_session()
+
+        elif not self.database.session_exists(session_id):
+            raise ValueError(
+                f"Session ID {session_id} does not exist."
+            )
+        
+        else:
+            # 기존 session_id가 주어지면 해당 세션 사용
+            self.session_id = session_id    
+        
+    def add_message(
+        self,
+        role: str,
+        content: str
+    ):
         """
-        사용자 메시지 추가
+        대화 내용 추가
         """
         self.database.save_message(
-            "user",
+            self.session_id,
+            role,
             content
         )
 
-
-    def add_assistant_message(self, content: str):
-        """
-        AI 응답 추가
-        """
-        self.database.save_message(
-            "assistant",
-            content
-        )
-
-
-    def get_messages(self, system_prompt: str):
+    def get_messages(self) -> list[dict[str, str]]:
         """
         OpenAI API 전달용 messages 반환
         """
 
-        # OpenAI API에 전달할 messages에 system_prompt 조립
-        messages = [
-            {
-                "role": "system",
-                "content": system_prompt
-            }
-        ]
-
-        messages.extend(
-            self.database.get_messages()
-        )
-        
-        return messages
+        return self.database.get_messages(self.session_id)
