@@ -125,7 +125,15 @@ SQLite Database
 
 ↓
 
-Conversation History 반환
+Message History 조회
+
+↓
+
+Conversation
+
+↓
+
+Token 기반 Context Message 선택
 
 ↓
 
@@ -134,7 +142,6 @@ Chatbot
 ↓
 
 System Prompt + Conversation History 조립
-
 
 ↓
 
@@ -246,7 +253,8 @@ System Prompt 추가
 
 OpenAI API
 ```
-Conversation 클래스에서 token기반으로 최근 Message만 선택하도록 구현하여 Database는 데이터 저장 및 조회만 담당하고, Conversation이 LLM에 전달할 Message를 구성하도록 역할을 분리하였습니다.
+Conversation 클래스는 Tokenizer를 활용하여 Message Token을 계산하고, Context Window 제한 내에서 전달할 Message를 선택하도록 구현하였습니다.
+Database는 데이터 저장 및 조회만 담당하고, Conversation이 LLM에 전달할 Message를 구성하도록 역할을 분리하였습니다.
 
 ```python
 for message in reversed(messages):
@@ -367,8 +375,8 @@ SQLite Database를 관리하는 클래스입니다.
 * SQLite 연결
 * Session 테이블 생성
 * messages 테이블 생성 및 조회
-* Message 저장
-* Conversation History 조회
+* Session 생성
+* Message 저장 및 조회
 
 ---
 
@@ -380,7 +388,7 @@ Tokenizer는 OpenAI 모델의 Token 수를 계산하는 클래스입니다.
 
 * 모델별 Tokenizer 생성
 * 문자열 Token 개수 계산
-* Conversation의 Context Window 계산 지원
+* Context Window 관리를 위한 Token 정보 제공
 
 ---
 
@@ -571,9 +579,9 @@ SQLite에 저장된 Conversation History를 활용하여 프로그램 재실행 
 
 향후 다음 기능을 추가할 예정입니다.
 
-* System Prompt를 포함한 Token 관리
 * Output Token Reserve 적용
 * Conversation Summary Memory
+* Token 기반 Dynamic Context 관리
 * FastAPI 기반 Chat API
 * LangChain Memory 적용
 * RAG 기반 Chatbot 확장
@@ -584,6 +592,6 @@ SQLite에 저장된 Conversation History를 활용하여 프로그램 재실행 
 
 이번 프로젝트에서는 단순한 질문-응답 프로그램이 아닌 **대화의 맥락을 유지하고 영구 저장 및 실시간 응답이 가능한 Chatbot**을 구현하였습니다.
 
-또한 Prompt, Conversation, Database, API Client를 역할별로 분리하여 유지보수성과 확장성을 고려한 LLM Application 구조를 설계하였습니다.
+이번 프로젝트를 통해 LLM Application에서 필요한 Conversation Memory, Context Window 관리, Streaming Response 구조를 단계적으로 구현하였습니다.
 
-더 나아가 Token 기반 Context Window를 적용하여 실제 LLM 서비스와 유사한 Context 관리 방식을 구현하였으며, 이를 기반으로 FastAPI 기반 Chat API, RAG, AI Agent 등으로 확장 가능한 아키텍처를 구축하였습니다. 이번 프로젝트를 통해 실제 서비스 수준의 Chatbot을 단계적으로 설계하고 구현하는 과정을 경험하며, 향후 다양한 LLM Application 개발의 기반을 마련하였습니다.
+또한 역할별 모듈 분리를 통해 확장 가능한 Chatbot 아키텍처를 설계하였으며, 이후 FastAPI 기반 API 서버, RAG, AI Agent 등 다양한 LLM Application으로 확장할 수 있는 기반을 마련하였습니다.
