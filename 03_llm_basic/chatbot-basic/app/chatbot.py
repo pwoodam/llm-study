@@ -51,7 +51,7 @@ class Chatbot:
             }
         ]
 
-        conversation_history = self.conversation.get_messages(
+        conversation_history = self.conversation.get_context_messages(
             max_tokens=available_tokens
         )
 

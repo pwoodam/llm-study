@@ -43,12 +43,12 @@ class Conversation:
             content
         )
 
-    def get_messages(
+    def get_context_messages(
         self,
         max_tokens: int
     ) -> list[dict[str, str]]:
         """
-        Token 제한 기반 Message 반환
+        Token 제한 내에서 OpenAI API 전달용 Context Message 반환
         """
 
         messages = self.database.get_messages(
