@@ -1,6 +1,7 @@
 from client import client
 from config import OPENAI_MODEL, MAX_CONTEXT_TOKENS
 from conversation import Conversation
+from tokenizer import Tokenizer
 
 
 class Chatbot:
@@ -15,8 +16,9 @@ class Chatbot:
 
         self.system_prompt = system_prompt
 
-        self.conversation = Conversation()
+        self.tokenizer = Tokenizer()
 
+        self.conversation = Conversation()
 
     def chat_stream(self, user_message: str):
         """
@@ -31,6 +33,15 @@ class Chatbot:
         )
 
         # 2. OpenAI API 호출 - 스트리밍 모드
+
+        system_prompt_tokens = self.tokenizer.count_tokens(
+            self.system_prompt
+        )
+        
+        available_tokens = (
+            MAX_CONTEXT_TOKENS
+            - system_prompt_tokens
+        )
         
         # OpenAI API에 전달할 messages에 system_prompt 조립
         messages = [
@@ -41,7 +52,7 @@ class Chatbot:
         ]
 
         conversation_history = self.conversation.get_messages(
-            max_tokens=MAX_CONTEXT_TOKENS
+            max_tokens=available_tokens
         )
 
         messages.extend(conversation_history)
