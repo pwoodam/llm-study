@@ -19,7 +19,7 @@ LLM은 이전 대화 내용을 자동으로 기억하지 않습니다.
 본 프로젝트에서는 다음 기능을 구현하였습니다.
 
 * Conversation History 관리
-* Conversation Length Limit (Sliding Window)
+* Token 기반 Context Window 관리
 * SQLite 기반 Conversation Memory 구현
 * Session 기반 대화 관리
 * System Prompt 분리 관리
@@ -38,7 +38,7 @@ LLM은 이전 대화 내용을 자동으로 기억하지 않습니다.
 * OpenAI API 사용 방법 이해
 * Role 기반 Message 구조 이해
 * Conversation History 관리 방식 이해
-* Sliding Window 기반 Conversation 관리 방식 이해
+* Token 기반 Context Window 관리 방식 이해
 * SQLite 기반 LLM Memory 구현
 * Session 기반 데이터 관리 구조 이해
 * 객체지향(OOP) 기반 Chatbot 설계
@@ -209,11 +209,13 @@ SQLite Database
 
 ---
 
-## Conversation Length Limit
+## Token 기반 Context Window
 
 LLM은 이전 대화 내용을 모두 함께 전달할 수 있지만, 대화가 길어질수록 Token 사용량과 API 비용이 증가하고 응답 속도가 느려질 수 있습니다.
 
-이를 방지하기 위해 최근 N개의 Message만 OpenAI API에 전달하는 **Sliding Window 방식**을 적용하였습니다.
+LLM은 Message 개수가 아니라 Token 수를 기준으로 Context Window를 관리합니다.
+
+따라서 최근 N개의 Message를 전달하는 방식 대신, Token 제한을 초과하지 않는 범위에서 최근 Message를 선택하여 전달하도록 구현하였습니다.
 
 ### 처리 과정
 
@@ -230,7 +232,11 @@ Conversation
 
 ↓
 
-최근 N개의 Message 선택
+Token 계산
+
+↓
+
+Token 제한 이하의 Message 선택
 
 ↓
 
@@ -240,14 +246,25 @@ System Prompt 추가
 
 OpenAI API
 ```
-Conversation 클래스에서 최근 Message만 선택하도록 구현하여 Database는 데이터 저장 및 조회만 담당하고, Conversation이 LLM에 전달할 Message를 구성하도록 역할을 분리하였습니다.
+Conversation 클래스에서 token기반으로 최근 Message만 선택하도록 구현하여 Database는 데이터 저장 및 조회만 담당하고, Conversation이 LLM에 전달할 Message를 구성하도록 역할을 분리하였습니다.
 
 ```python
-return self.database.get_messages(
-    self.session_id
-)[-limit:]
+for message in reversed(messages):
+
+    message_tokens = self.tokenizer.count_tokens(
+        message["content"]
+    )
+
+    if total_tokens + message_tokens > max_tokens:
+        break
+
+    selected_messages.insert(0, message)
+
+    total_tokens += message_tokens
 ```
-이를 통해 오래된 대화는 SQLite에 그대로 보관하면서도 LLM에는 필요한 최근 대화만 전달하여 성능과 비용을 효율적으로 관리할 수 있습니다.
+Token 기반 Context Window를 적용함으로써 Message의 개수가 아니라 실제 LLM이 사용하는 Token 수를 기준으로 대화 기록을 관리하도록 개선하였습니다.
+
+이를 통해 긴 Message가 포함된 경우에도 Context Window를 초과하지 않도록 제어할 수 있으며, 실제 LLM 서비스에서 사용하는 Memory 관리 방식과 유사한 구조를 구현하였습니다.
 
 ---
 
@@ -336,7 +353,8 @@ Conversation History를 관리하는 클래스입니다.
 * User Message 추가
 * Assistant Message 추가
 * Database 연동
-* 최근 N개의 Message 반환 (Sliding Window)
+* Token 기반 Context Window 구성
+* Token 제한 이하의 Message 반환
 
 ---
 
@@ -351,6 +369,18 @@ SQLite Database를 관리하는 클래스입니다.
 * messages 테이블 생성 및 조회
 * Message 저장
 * Conversation History 조회
+
+---
+
+## Tokenizer
+
+Tokenizer는 OpenAI 모델의 Token 수를 계산하는 클래스입니다.
+
+주요 기능
+
+* 모델별 Tokenizer 생성
+* 문자열 Token 개수 계산
+* Conversation의 Context Window 계산 지원
 
 ---
 
@@ -521,7 +551,9 @@ SQLite에 저장된 Conversation History를 활용하여 프로그램 재실행 
 
 * Multi-turn Conversation 구현
 * Conversation History 관리
-* Sliding Window 기반 Conversation 관리
+* Token 기반 Context Window 관리
+* tiktoken을 활용한 Token 계산
+* LLM Context Window 관리 방식 이해
 * 역할 분리를 고려한 Memory 관리 구조 설계
 * SQLite 기반 Memory 구현
 * Session 기반 데이터 모델링
@@ -539,7 +571,9 @@ SQLite에 저장된 Conversation History를 활용하여 프로그램 재실행 
 
 향후 다음 기능을 추가할 예정입니다.
 
-* Token 기반 Context Window 관리
+* System Prompt를 포함한 Token 관리
+* Output Token Reserve 적용
+* Conversation Summary Memory
 * FastAPI 기반 Chat API
 * LangChain Memory 적용
 * RAG 기반 Chatbot 확장
@@ -552,4 +586,4 @@ SQLite에 저장된 Conversation History를 활용하여 프로그램 재실행 
 
 또한 Prompt, Conversation, Database, API Client를 역할별로 분리하여 유지보수성과 확장성을 고려한 LLM Application 구조를 설계하였습니다.
 
-이를 기반으로 Token 기반 Memory 관리, FastAPI 기반 Chat API, RAG, AI Agent 프로젝트까지 확장 가능한 LLM Application 구조를 설계하였으며, 실제 서비스 수준의 Chatbot 아키텍처를 단계적으로 구현할 수 있는 기반을 마련하였습니다.
+더 나아가 Token 기반 Context Window를 적용하여 실제 LLM 서비스와 유사한 Context 관리 방식을 구현하였으며, 이를 기반으로 FastAPI 기반 Chat API, RAG, AI Agent 등으로 확장 가능한 아키텍처를 구축하였습니다. 이번 프로젝트를 통해 실제 서비스 수준의 Chatbot을 단계적으로 설계하고 구현하는 과정을 경험하며, 향후 다양한 LLM Application 개발의 기반을 마련하였습니다.
