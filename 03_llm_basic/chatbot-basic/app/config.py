@@ -17,8 +17,8 @@ if not OPENAI_API_KEY:
         "OPENAI_API_KEY가 설정되지 않았습니다."
     )
 
-MAX_CONVERSATION_MESSAGES = int(
+MAX_CONTEXT_TOKENS = int(
     os.getenv(
-        "MAX_CONVERSATION_MESSAGES"
+        "MAX_CONTEXT_TOKENS"
     )
 )

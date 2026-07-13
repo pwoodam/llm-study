@@ -1,5 +1,7 @@
 from database import Database
 
+from tokenizer import Tokenizer
+
 class Conversation:
     """
     대화 기록을 관리하는 클래스
@@ -12,6 +14,7 @@ class Conversation:
     ):
 
         self.database = Database()
+        self.tokenizer = Tokenizer()
 
         if session_id is None:
             # session_id가 주어지지 않으면 새 세션 생성
@@ -42,10 +45,38 @@ class Conversation:
 
     def get_messages(
         self,
-        limit : int = 10
+        max_tokens: int
     ) -> list[dict[str, str]]:
         """
-        OpenAI API 전달용 messages를 최근 N개 반환
+        Token 제한 기반 Message 반환
         """
 
-        return self.database.get_messages(self.session_id)[-limit:]
+        messages = self.database.get_messages(
+            self.session_id
+        )
+
+        selected_messages = []
+
+        total_tokens = 0
+
+        # 최신 Message부터 확인
+        for message in reversed(messages):
+
+            message_tokens = self.tokenizer.count_tokens(
+                message["content"]
+            )
+
+
+            if total_tokens + message_tokens > max_tokens:
+                break
+
+
+            selected_messages.insert(
+                0, # 순서를 유지하기 위해 맨 앞에 삽입
+                message
+            )
+
+            total_tokens += message_tokens
+
+
+        return selected_messages

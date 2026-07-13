@@ -1,5 +1,5 @@
 from client import client
-from config import OPENAI_MODEL, MAX_CONVERSATION_MESSAGES
+from config import OPENAI_MODEL, MAX_CONTEXT_TOKENS
 from conversation import Conversation
 
 
@@ -41,7 +41,7 @@ class Chatbot:
         ]
 
         conversation_history = self.conversation.get_messages(
-            limit=MAX_CONVERSATION_MESSAGES
+            max_tokens=MAX_CONTEXT_TOKENS
         )
 
         messages.extend(conversation_history)
