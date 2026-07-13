@@ -1,5 +1,5 @@
 from client import client
-from config import OPENAI_MODEL
+from config import OPENAI_MODEL, MAX_CONVERSATION_MESSAGES
 from conversation import Conversation
 
 
@@ -39,7 +39,12 @@ class Chatbot:
                 "content": self.system_prompt
             }
         ]
-        messages.extend(self.conversation.get_messages())
+
+        conversation_history = self.conversation.get_messages(
+            limit=MAX_CONVERSATION_MESSAGES
+        )
+
+        messages.extend(conversation_history)
 
         stream = client.responses.create(
             model=OPENAI_MODEL,

@@ -16,3 +16,9 @@ if not OPENAI_API_KEY:
     raise ValueError(
         "OPENAI_API_KEY가 설정되지 않았습니다."
     )
+
+MAX_CONVERSATION_MESSAGES = int(
+    os.getenv(
+        "MAX_CONVERSATION_MESSAGES"
+    )
+)

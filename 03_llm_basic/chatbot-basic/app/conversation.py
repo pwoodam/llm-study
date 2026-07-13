@@ -40,9 +40,12 @@ class Conversation:
             content
         )
 
-    def get_messages(self) -> list[dict[str, str]]:
+    def get_messages(
+        self,
+        limit : int = 10
+    ) -> list[dict[str, str]]:
         """
-        OpenAI API 전달용 messages 반환
+        OpenAI API 전달용 messages를 최근 N개 반환
         """
 
-        return self.database.get_messages(self.session_id)
+        return self.database.get_messages(self.session_id)[-limit:]
