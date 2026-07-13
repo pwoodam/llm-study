@@ -19,6 +19,7 @@ LLM은 이전 대화 내용을 자동으로 기억하지 않습니다.
 본 프로젝트에서는 다음 기능을 구현하였습니다.
 
 * Conversation History 관리
+* Conversation Length Limit (Sliding Window)
 * SQLite 기반 Conversation Memory 구현
 * Session 기반 대화 관리
 * System Prompt 분리 관리
@@ -37,6 +38,7 @@ LLM은 이전 대화 내용을 자동으로 기억하지 않습니다.
 * OpenAI API 사용 방법 이해
 * Role 기반 Message 구조 이해
 * Conversation History 관리 방식 이해
+* Sliding Window 기반 Conversation 관리 방식 이해
 * SQLite 기반 LLM Memory 구현
 * Session 기반 데이터 관리 구조 이해
 * 객체지향(OOP) 기반 Chatbot 설계
@@ -87,7 +89,7 @@ chatbot-basic
 │       └── system.txt    # System Prompt 관리
 │
 ├── data
-│   └── chatbot.db        # Conversation History 저장 DB
+│   └── chatbot.db        # Conversation History 저장 DB (runtime 생성)
 │
 ├── tests
 │   └── .gitkeep
@@ -123,7 +125,11 @@ SQLite Database
 
 ↓
 
-Message History 조회
+Conversation History 반환
+
+↓
+
+Chatbot
 
 ↓
 
@@ -200,6 +206,48 @@ SQLite Database
 
 영구 저장
 ```
+
+---
+
+## Conversation Length Limit
+
+LLM은 이전 대화 내용을 모두 함께 전달할 수 있지만, 대화가 길어질수록 Token 사용량과 API 비용이 증가하고 응답 속도가 느려질 수 있습니다.
+
+이를 방지하기 위해 최근 N개의 Message만 OpenAI API에 전달하는 **Sliding Window 방식**을 적용하였습니다.
+
+### 처리 과정
+
+```text
+SQLite Database
+
+↓
+
+전체 Message 조회
+
+↓
+
+Conversation
+
+↓
+
+최근 N개의 Message 선택
+
+↓
+
+System Prompt 추가
+
+↓
+
+OpenAI API
+```
+Conversation 클래스에서 최근 Message만 선택하도록 구현하여 Database는 데이터 저장 및 조회만 담당하고, Conversation이 LLM에 전달할 Message를 구성하도록 역할을 분리하였습니다.
+
+```python
+return self.database.get_messages(
+    self.session_id
+)[-limit:]
+```
+이를 통해 오래된 대화는 SQLite에 그대로 보관하면서도 LLM에는 필요한 최근 대화만 전달하여 성능과 비용을 효율적으로 관리할 수 있습니다.
 
 ---
 
@@ -288,7 +336,7 @@ Conversation History를 관리하는 클래스입니다.
 * User Message 추가
 * Assistant Message 추가
 * Database 연동
-* OpenAI API 전달용 Message 반환
+* 최근 N개의 Message 반환 (Sliding Window)
 
 ---
 
@@ -300,7 +348,7 @@ SQLite Database를 관리하는 클래스입니다.
 
 * SQLite 연결
 * Session 테이블 생성
-* messages 테이블 생성
+* messages 테이블 생성 및 조회
 * Message 저장
 * Conversation History 조회
 
@@ -314,7 +362,7 @@ Chatbot 서비스 로직을 담당하는 핵심 클래스입니다.
 
 * 사용자 입력 처리
 * OpenAI API 호출
-* Conversation History 관리
+* Conversation History 조립
 * Streaming Response 처리
 * Assistant 응답 저장
 
@@ -473,6 +521,8 @@ SQLite에 저장된 Conversation History를 활용하여 프로그램 재실행 
 
 * Multi-turn Conversation 구현
 * Conversation History 관리
+* Sliding Window 기반 Conversation 관리
+* 역할 분리를 고려한 Memory 관리 구조 설계
 * SQLite 기반 Memory 구현
 * Session 기반 데이터 모델링
 * Role 기반 Message 구성
@@ -489,8 +539,7 @@ SQLite에 저장된 Conversation History를 활용하여 프로그램 재실행 
 
 향후 다음 기능을 추가할 예정입니다.
 
-* Conversation 길이 제한
-* Token 기반 대화 관리
+* Token 기반 Context Window 관리
 * FastAPI 기반 Chat API
 * LangChain Memory 적용
 * RAG 기반 Chatbot 확장
@@ -503,4 +552,4 @@ SQLite에 저장된 Conversation History를 활용하여 프로그램 재실행 
 
 또한 Prompt, Conversation, Database, API Client를 역할별로 분리하여 유지보수성과 확장성을 고려한 LLM Application 구조를 설계하였습니다.
 
-이를 기반으로 이후 구현할 Token 관리, FastAPI 기반 Chat API, RAG, AI Agent 프로젝트로 확장 가능한 LLM Application 설계 경험을 확보하였습니다.
+이를 기반으로 Token 기반 Memory 관리, FastAPI 기반 Chat API, RAG, AI Agent 프로젝트까지 확장 가능한 LLM Application 구조를 설계하였으며, 실제 서비스 수준의 Chatbot 아키텍처를 단계적으로 구현할 수 있는 기반을 마련하였습니다.
