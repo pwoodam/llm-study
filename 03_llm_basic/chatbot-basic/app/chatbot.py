@@ -1,5 +1,5 @@
 from client import client
-from config import OPENAI_MODEL, MAX_CONTEXT_TOKENS, OUTPUT_TOKEN_RESERVE
+from config import OPENAI_MODEL, MAX_CONTEXT_TOKENS, OUTPUT_TOKEN_RESERVE, SUMMARY_TRIGGER_TOKENS, SUMMARY_MAX_OUTPUT_TOKENS
 from conversation import Conversation
 from tokenizer import Tokenizer
 
@@ -11,10 +11,12 @@ class Chatbot:
     
     def __init__(
         self,
-        system_prompt: str
+        system_prompt: str,
+        summary_prompt: str
     ):
 
         self.system_prompt = system_prompt
+        self.summary_prompt = summary_prompt
 
         self.tokenizer = Tokenizer()
 
@@ -37,12 +39,25 @@ class Chatbot:
         system_prompt_tokens = self.tokenizer.count_tokens(
             self.system_prompt
         )
-        
+
+        summary = self.conversation.get_summary()
+
+        summary_context = f"""
+        이전 대화 요약:
+        {summary}
+        """
+
+        summary_prompt_tokens = 0
+
+        if summary:
+            summary_prompt_tokens = self.tokenizer.count_tokens(summary_context)
+
         available_tokens = max(
             0,
             MAX_CONTEXT_TOKENS
             - system_prompt_tokens
             - OUTPUT_TOKEN_RESERVE # 응답 생성을 위한 Output Token 공간을 미리 확보
+            - summary_prompt_tokens
         )
         
         # OpenAI API에 전달할 messages에 system_prompt 조립
@@ -52,6 +67,14 @@ class Chatbot:
                 "content": self.system_prompt
             }
         ]
+
+        if summary:
+            messages.append(
+                {
+                    "role": "system",
+                    "content": summary_context
+                }
+            )
 
         conversation_history = self.conversation.get_context_messages(
             max_tokens=available_tokens
@@ -83,3 +106,67 @@ class Chatbot:
             role="assistant",
             content=full_response
         )
+
+        # 4. 대화 요약이 필요한지 확인하고 필요하면 요약 생성
+        if self.should_summarize():
+            print("SUMMARY 실행")
+            self.summarize_conversation()
+    
+    def summarize_conversation(self):
+        """
+        대화 요약 생성
+        """
+
+        # OpenAI API 호출 - 요약 생성
+        messages = [
+            {
+                "role": "system",
+                "content": self.summary_prompt
+            }
+        ]
+
+        previous_summary = self.conversation.get_summary()
+
+        if self.conversation.get_summary():
+            messages.append(
+                {
+                    "role": "system",
+                    "content": f"""
+                    이전 대화 요약:
+                    {previous_summary}
+                    """
+                }
+            )
+
+        conversation_history = self.conversation.get_unsummarized_messages()
+
+        messages.extend(conversation_history)
+
+        response = client.responses.create(
+            model=OPENAI_MODEL,
+            input=messages,
+            max_output_tokens=SUMMARY_MAX_OUTPUT_TOKENS
+        )
+
+        summary = response.output_text
+
+        # 요약 저장
+        self.conversation.save_summary(summary)
+
+    def should_summarize(self) -> bool:
+        """
+        Conversation Summary 생성 필요 여부 판단
+        """
+
+        messages = self.conversation.get_all_messages()
+
+        total_tokens = 0
+
+        for message in messages:
+            total_tokens += self.tokenizer.count_tokens(
+                message["content"]
+            )
+            if total_tokens > SUMMARY_TRIGGER_TOKENS:
+                break
+
+        return total_tokens > SUMMARY_TRIGGER_TOKENS

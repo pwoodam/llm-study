@@ -80,3 +80,48 @@ class Conversation:
 
 
         return selected_messages
+    
+    def get_summary(self) -> str | None:
+        """
+        대화 요약 반환
+        """
+
+        return self.database.get_summary(
+            self.session_id
+        )
+    
+    def save_summary(
+        self,
+        summary: str
+    ):
+        """
+        대화 요약 저장
+        """
+
+        # 마지막으로 DB에 저장된 Message의 id 조회 -> conversation_summaries 테이블의 last_message_id 업데이트 
+        last_message_id = self.database.get_last_message_id(
+            self.session_id
+        )
+
+        self.database.save_summary(
+            self.session_id,
+            summary,
+            last_message_id
+        )
+
+    def get_all_messages(
+        self
+    ) -> list[dict[str,str]]:
+
+        return self.database.get_messages(
+            self.session_id
+        )
+    
+    def get_unsummarized_messages(self) -> list[dict[str,str]]:
+        """
+        요약 이후의 최근 대화 내용 반환
+        """
+
+        return self.database.get_unsummarized_messages(
+            self.session_id
+        )

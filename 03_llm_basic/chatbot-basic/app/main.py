@@ -16,14 +16,29 @@ def load_system_prompt():
         encoding="utf-8"
     ) as file:
         return file.read()
+    
+def load_summary_prompt():
+    prompt_path = (
+        Path(__file__).parent
+        / "prompts"
+        / "summary.txt"
+    )
+
+    with open(
+        prompt_path,
+        "r",
+        encoding="utf-8"
+    ) as file:
+        return file.read()
 
 
 def main():
 
     system_prompt = load_system_prompt()
-
+    summary_prompt = load_summary_prompt()
     chatbot = Chatbot(
-        system_prompt
+        system_prompt,
+        summary_prompt
     )
 
 

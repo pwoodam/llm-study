@@ -28,3 +28,15 @@ OUTPUT_TOKEN_RESERVE = int(
         "OUTPUT_TOKEN_RESERVE"
     )
 )
+
+SUMMARY_TRIGGER_TOKENS = int(
+    os.getenv(
+        "SUMMARY_TRIGGER_TOKENS"
+    )
+)
+
+SUMMARY_MAX_OUTPUT_TOKENS = int(
+    os.getenv(
+        "SUMMARY_MAX_OUTPUT_TOKENS"
+    )
+)
