@@ -22,3 +22,9 @@ MAX_CONTEXT_TOKENS = int(
         "MAX_CONTEXT_TOKENS"
     )
 )
+
+OUTPUT_TOKEN_RESERVE = int(
+    os.getenv(
+        "OUTPUT_TOKEN_RESERVE"
+    )
+)

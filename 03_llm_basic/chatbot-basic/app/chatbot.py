@@ -1,5 +1,5 @@
 from client import client
-from config import OPENAI_MODEL, MAX_CONTEXT_TOKENS
+from config import OPENAI_MODEL, MAX_CONTEXT_TOKENS, OUTPUT_TOKEN_RESERVE
 from conversation import Conversation
 from tokenizer import Tokenizer
 
@@ -38,9 +38,11 @@ class Chatbot:
             self.system_prompt
         )
         
-        available_tokens = (
+        available_tokens = max(
+            0,
             MAX_CONTEXT_TOKENS
             - system_prompt_tokens
+            - OUTPUT_TOKEN_RESERVE # 응답 생성을 위한 Output Token 공간을 미리 확보
         )
         
         # OpenAI API에 전달할 messages에 system_prompt 조립
