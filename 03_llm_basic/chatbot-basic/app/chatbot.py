@@ -1,3 +1,5 @@
+from openai import APIError
+
 from client import client
 from config import OPENAI_MODEL, MAX_CONTEXT_TOKENS, OUTPUT_TOKEN_RESERVE, SUMMARY_TRIGGER_TOKENS, SUMMARY_MAX_OUTPUT_TOKENS
 from conversation import Conversation
@@ -82,35 +84,45 @@ class Chatbot:
 
         messages.extend(conversation_history)
 
-        stream = client.responses.create(
-            model=OPENAI_MODEL,
-            input=messages,
-            stream=True
-        )
-
         full_response = ""
 
+        try:
+            stream = client.responses.create(
+                model=OPENAI_MODEL,
+                input=messages,
+                stream=True
+            )
 
-        for event in stream:
+            for event in stream:
 
-            if event.type == "response.output_text.delta":
+                if event.type == "response.output_text.delta":
 
-                # API 응답 구조 변경에 따라 event.delta가 None일 수 있으므로 체크 필요
-                if event.delta:
-                    full_response += event.delta
-                    yield event.delta
+                    # API 응답 구조 변경에 따라 event.delta가 None일 수 있으므로 체크 필요
+                    if event.delta:
+                        full_response += event.delta
+                        yield event.delta
 
+        except APIError as e:
+            print(f"[Chatbot] OpenAI API 호출 중 오류 발생: {e}")
+            yield "\n[오류: 응답을 생성하는 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.]"
+            # 응답이 불완전하므로 저장하지 않고 종료
+            return
 
-        # 3. AI 응답 저장
-        self.conversation.add_message(
-            role="assistant",
-            content=full_response
-        )
+        # 3. AI 응답 저장 (스트리밍이 정상적으로 끝난 경우에만)
+        if full_response:
+            self.conversation.add_message(
+                role="assistant",
+                content=full_response
+            )
 
         # 4. 대화 요약이 필요한지 확인하고 필요하면 요약 생성
-        if self.should_summarize():
-            print("SUMMARY 실행")
-            self.summarize_conversation()
+        # 요약 실패가 대화 자체를 중단시키지 않도록 별도로 감싼다
+        try:
+            if self.should_summarize():
+                print("SUMMARY 실행")
+                self.summarize_conversation()
+        except APIError as e:
+            print(f"[Chatbot] 대화 요약 중 오류 발생 (다음 턴에 재시도됩니다): {e}")
     
     def summarize_conversation(self):
         """
