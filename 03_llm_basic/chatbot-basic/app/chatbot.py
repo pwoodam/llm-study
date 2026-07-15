@@ -158,7 +158,8 @@ class Chatbot:
         Conversation Summary 생성 필요 여부 판단
         """
 
-        messages = self.conversation.get_all_messages()
+        # 메시지가 누적되면 한 번씩 요약하도록 요약되지 않은 메시지만 불러옴
+        messages = self.conversation.get_unsummarized_messages()
 
         total_tokens = 0
 
